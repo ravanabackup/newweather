@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rain Forecast - Smart Weather App</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#0ea5e9">
+  <meta name="description" content="Beautiful 3-day rain forecast with night mode">
+  <link rel="manifest" href="#" id="manifest-placeholder">
+  
+  <!-- iOS Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Rain Forecast">
+  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iOTYiIGN5PSI5NiIgcj0iOTYiIGZpbGw9IiMwZWE1ZTkiLz48cGF0aCBkPSJNNjAgNzJjMC04LjggNy4yLTE2IDE2LTE2aDQwYzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDc2Yy04LjggMC0xNi03LjItMTYtMTZ6IiBmaWxsPSJ3aGl0ZSIvPjxwYXRoIGQ9Ik04NCA5NmMyLjIgMCA0IDEuOCA0IDR2MjRjMCAyLjItMS44IDQtNCA0cy00LTEuOC00LTRWMTAwYzAtMi4yIDEuOC00IDQtNHoiIGZpbGw9IndoaXRlIi8+PHBhdGggZD0iTTEwNCA5NmMyLjIgMCA0IDEuOCA0IDR2MjRjMCAyLjItMS44IDQtNCA0cy00LTEuOC00LTRWMTAwYzAtMi4yIDEuOC00IDQtNHoiIGZpbGw9IndoaXRlIi8+PC9zdmc+">
+
+  <style>
+    :root {
+      --primary-color: #0ea5e9;
+      --primary-dark: #0284c7;
+      --bg-light: linear-gradient(135deg, #dbeafe, #f0f9ff);
+      --bg-dark: linear-gradient(135deg, #0f172a, #1e293b);
+      --card-light: rgba(255, 255, 255, 0.95);
+      --card-dark: rgba(30, 41, 59, 0.95);
+      --text-light: #1e293b;
+      --text-dark: #f1f5f9;
+      --border-light: #e2e8f0;
+      --border-dark: #475569;
+      --hour-box-light: #f8fafc;
+      --hour-box-dark: #334155;
+      --glass-light: rgba(255, 255, 255, 0.1);
+      --glass-dark: rgba(15, 23, 42, 0.3);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-light);
+      padding: 1rem;
+      color: var(--text-light);
+      min-height: 100vh;
+      transition: all 0.3s ease;
+    }
+
+    body.dark {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+    }
+
+    .app-header {
+      text-align: center;
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    .app-title {
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .control-btn {
+      background: var(--glass-light);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-light);
+      border-radius: 50px;
+      padding: 0.75rem 1.5rem;
+      color: var(--text-light);
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .dark .control-btn {
+      background: var(--glass-dark);
+      border-color: var(--border-dark);
+      color: var(--text-dark);
+    }
+
+    .control-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(14, 165, 233, 0.3);
+    }
+
+    .control-btn.active {
+      background: var(--primary-color);
+      color: white;
+      border-color: var(--primary-color);
+    }
+
+    .card {
+      background: var(--card-light);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-light);
+      border-radius: 24px;
+      padding: 2rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      max-width: 900px;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dark .card {
+      background: var(--card-dark);
+      border-color: var(--border-dark);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary-color), var(--primary-dark));
+    }
+
+    .weather-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .weather-location {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .weather-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1rem;
+      display: block;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+    }
+
+    .weather-condition {
+      font-size: 1.1rem;
+      opacity: 0.8;
+    }
+
+    .forecast-day {
+      margin: 2rem 0;
+      padding: 1.5rem 0;
+      border-top: 1px solid var(--border-light);
+      position: relative;
+    }
+
+    .dark .forecast-day {
+      border-color: var(--border-dark);
+    }
+
+    .forecast-day:first-child {
+      border-top: none;
+    }
+
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .day-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .rain-chance {
+      color: var(--primary-color);
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .rain-alert {
+      background: linear-gradient(135deg, #fef3c7, #fbbf24);
+      color: #92400e;
+      padding: 0.75rem 1rem;
+      border-radius: 12px;
+      margin: 1rem 0;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      animation: pulse 2s infinite;
+    }
+
+    .dark .rain-alert {
+      background: linear-gradient(135deg, #7c2d12, #dc2626);
+      color: #fef3c7;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+
+    details {
+      margin-top: 1rem;
+    }
+
+    details summary {
+      cursor: pointer;
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      background: var(--hour-box-light);
+      border-radius: 12px;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .dark details summary {
+      background: var(--hour-box-dark);
+    }
+
+    details summary:hover {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .hourly-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+      padding: 1rem 0;
+    }
+
+    .hour-card {
+      background: var(--hour-box-light);
+      border-radius: 16px;
+      padding: 1rem;
+      text-align: center;
+      transition: all 0.2s ease;
+      border: 1px solid var(--border-light);
+    }
+
+    .dark .hour-card {
+      background: var(--hour-box-dark);
+      border-color: var(--border-dark);
+    }
+
+    .hour-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(14, 165, 233, 0.2);
+    }
+
+    .hour-time {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .hour-icon {
+      width: 40px;
+      height: 40px;
+      margin: 0.5rem auto;
+    }
+
+    .hour-rain {
+      color: var(--primary-color);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      font-size: 1.1rem;
+      opacity: 0.7;
+    }
+
+    .loading::after {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid var(--primary-color);
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 1s linear infinite;
+      margin-left: 1rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg) };
+    }
+
+    .error {
+      text-align: center;
+      padding: 2rem;
+      color: #dc2626;
+      background: #fef2f2;
+      border-radius: 12px;
+      margin: 1rem 0;
+    }
+
+    .dark .error {
+      background: #7f1d1d;
+      color: #fca5a5;
+    }
+
+    .install-prompt {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      background: var(--primary-color);
+      color: white;
+      padding: 1rem;
+      border-radius: 16px;
+      text-align: center;
+      transform: translateY(100px);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+      box-shadow: 0 10px 30px rgba(14, 165, 233, 0.3);
+    }
+
+    .install-prompt.show {
+      transform: translateY(0);
+    }
+
+    .install-prompt button {
+      background: white;
+      color: var(--primary-color);
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 0 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .install-prompt button:hover {
+      transform: scale(1.05);
+    }
+
+    .weather-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .stat-card {
+      background: var(--hour-box-light);
+      padding: 1rem;
+      border-radius: 12px;
+      text-align: center;
+      border: 1px solid var(--border-light);
+    }
+
+    .dark .stat-card {
+      background: var(--hour-box-dark);
+      border-color: var(--border-dark);
+    }
+
+    .stat-value {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.2rem;
+    }
+
+    .last-updated {
+      text-align: center;
+      font-size: 0.8rem;
+      opacity: 0.6;
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 0.5rem;
+      }
+      
+      .card {
+        padding: 1.5rem;
+        border-radius: 16px;
+      }
+      
+      .hourly-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      }
+      
+      .install-prompt {
+        left: 10px;
+        right: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-header">
+    <h1 class="app-title">🌧️ Rain Forecast</h1>
+    <div class="controls">
+      <button class="control-btn" id="themeToggle">
+        🌙 Night Mode
+      </button>
+      <button class="control-btn" id="refreshBtn">
+        🔄 Refresh
+      </button>
+    </div>
+  </div>
+
+  <div class="card" id="weatherCard" style="display:none;">
+    <div class="weather-header">
+      <h2 class="weather-location" id="location"></h2>
+      <img id="icon" class="weather-icon" src="" alt="Weather Icon" />
+      <p class="weather-condition" id="condition"></p>
+    </div>
+    
+    <div class="weather-stats" id="weatherStats"></div>
+    
+    <div id="forecastDays"></div>
+    
+    <div class="last-updated" id="lastUpdated"></div>
+  </div>
+
+  <div class="loading" id="loading">
+    Loading weather data for India
+  </div>
+
+  <div class="install-prompt" id="installPrompt">
+    <strong>📱 Install Weather App</strong><br>
+    Add to your home screen for quick access!
+    <br><br>
+    <button onclick="installApp()">Install Now</button>
+    <button onclick="dismissInstall()">Maybe Later</button>
+  </div>
+
+  <script>
+    const apiKey = "65bb53480a9d4f52959171724252906";
+    let darkMode = false;
+    let deferredPrompt;
+
+    // Create and inject PWA manifest
+    const manifest = {
+      "name": "Rain Forecast - Weather App",
+      "short_name": "RainApp",
+      "start_url": "/",
+      "display": "standalone",
+      "background_color": "#ffffff",
+      "theme_color": "#0ea5e9",
+      "icons": [{
+        "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjU2IiBjeT0iMjU2IiByPSIyNTYiIGZpbGw9IiMwZWE1ZTkiLz48cGF0aCBkPSJNMTYwIDE5MmMwLTIzLjUgMTkuMS00MiA0Mi00Mmg4OGMyMy41IDAgNDIgMTguNSA0MiA0MnMtMTguNSA0Mi00MiA0MkgyMDJjLTIzLjUgMC00Mi0xOC41LTQyLTQyeiIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMjI0IDI1NmM1LjkgMCAxMC43IDQuOCAxMC43IDEwLjd2NjRjMCA1LjktNC44IDEwLjctMTAuNyAxMC43cy0xMC43LTQuOC0xMC43LTEwLjd2LTY0YzAtNS45IDQuOC0xMC43IDEwLjctMTAuN3oiIGZpbGw9IndoaXRlIi8+PHBhdGggZD0iTTI4OCAyNTZjNS45IDAgMTAuNyA0LjggMTAuNyAxMC43djY0YzAgNS45LTQuOCAxMC43LTEwLjcgMTAuN3MtMTAuNy00LjgtMTAuNy0xMC43di02NGMwLTUuOSA0LjgtMTAuNyAxMC43LTEwLjd6IiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==",
+        "sizes": "512x512",
+        "type": "image/svg+xml"
+      }]
+    };
+
+    const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(manifestBlob);
+    document.getElementById('manifest-placeholder').href = manifestURL;
+
+    // PWA Installation
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      setTimeout(() => {
+        document.getElementById('installPrompt').classList.add('show');
+      }, 3000); // Show after 3 seconds
+    });
+
+    function installApp() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          deferredPrompt = null;
+          document.getElementById('installPrompt').classList.remove('show');
+        });
+      }
+    }
+
+    function dismissInstall() {
+      document.getElementById('installPrompt').classList.remove('show');
+      localStorage.setItem('installDismissed', 'true');
+    }
+
+    // Theme Management
+    function toggleTheme() {
+      darkMode = !darkMode;
+      document.body.classList.toggle('dark', darkMode);
+      const btn = document.getElementById('themeToggle');
+      btn.innerHTML = darkMode ? '☀️ Light Mode' : '🌙 Night Mode';
+      btn.classList.toggle('active', darkMode);
+      localStorage.setItem('darkMode', darkMode);
+    }
+
+    // Time formatting for Indian timezone
+    function formatTime(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleTimeString('en-IN', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Kolkata'
+      });
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      
+      if (date.toDateString() === today.toDateString()) {
+        return "Today";
+      } else if (date.toDateString() === tomorrow.toDateString()) {
+        return "Tomorrow";
+      } else {
+        return date.toLocaleDateString('en-IN', { 
+          weekday: 'long', 
+          month: 'short', 
+          day: 'numeric',
+          timeZone: 'Asia/Kolkata'
+        });
+      }
+    }
+
+    function updateLastUpdated() {
+      const now = new Date();
+      const timeString = now.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Asia/Kolkata'
+      });
+      document.getElementById('lastUpdated').textContent = `Last updated: ${timeString} IST`;
+    }
+
+    async function getWeather(location) {
+      const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${location}&days=3&aqi=no&alerts=no`;
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Weather data not available');
+        
+        const data = await res.json();
+
+        const loc = data.location.name + ", " + data.location.region;
+        const icon = "https:" + data.current.condition.icon;
+        const desc = data.current.condition.text;
+        const temp = Math.round(data.current.temp_c);
+
+        document.getElementById("location").textContent = loc;
+        document.getElementById("icon").src = icon;
+        document.getElementById("condition").textContent = `${desc}, ${temp}°C`;
+
+        // Weather stats
+        const statsHtml = `
+          <div class="stat-card">
+            <div class="stat-value">${Math.round(data.current.feelslike_c)}°C</div>
+            <div class="stat-label">Feels Like</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${data.current.humidity}%</div>
+            <div class="stat-label">Humidity</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${Math.round(data.current.wind_kph)} km/h</div>
+            <div class="stat-label">Wind Speed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${data.current.vis_km} km</div>
+            <div class="stat-label">Visibility</div>
+          </div>
+        `;
+        document.getElementById("weatherStats").innerHTML = statsHtml;
+
+        const container = document.getElementById("forecastDays");
+        container.innerHTML = "";
+
+        data.forecast.forecastday.forEach((day, index) => {
+          const date = formatDate(day.date);
+          const dayDesc = day.day.condition.text;
+          const rainChance = day.day.daily_chance_of_rain;
+          const maxTemp = Math.round(day.day.maxtemp_c);
+          const minTemp = Math.round(day.day.mintemp_c);
+
+          const section = document.createElement("div");
+          section.className = "forecast-day";
+
+          const rainAlertHtml = rainChance > 70 ? 
+            `<div class="rain-alert">⚠️ High chance of rain ${index === 0 ? 'today' : index === 1 ? 'tomorrow' : 'this day'} - be prepared!</div>` : '';
+
+          section.innerHTML = `
+            <div class="day-header">
+              <div class="day-title">${date}</div>
+              <div class="rain-chance">${rainChance}% rain chance</div>
+            </div>
+            <p>${dayDesc} • High ${maxTemp}°C • Low ${minTemp}°C</p>
+            ${rainAlertHtml}
+            <details>
+              <summary>📊 Hourly Breakdown (24 hours)</summary>
+              <div class="hourly-grid">
+                ${day.hour.map(hour => {
+                  const rain = hour.chance_of_rain;
+                  const icon = "https:" + hour.condition.icon;
+                  const temp = Math.round(hour.temp_c);
+                  return `
+                    <div class="hour-card">
+                      <div class="hour-time">${formatTime(hour.time)}</div>
+                      <img src="${icon}" alt="Weather" class="hour-icon"/>
+                      <div>${temp}°C</div>
+                      <div class="hour-rain">${rain}% rain</div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </details>
+          `;
+          container.appendChild(section);
+        });
+
+        updateLastUpdated();
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("weatherCard").style.display = "block";
+        
+      } catch (err) {
+        console.error('Weather fetch error:', err);
+        document.getElementById("loading").innerHTML = 
+          `<div class="error">❌ Failed to load weather data. Please check your connection and try again.</div>`;
+      }
+    }
+
+    async function detectLocationAndGetWeather() {
+      document.getElementById("loading").style.display = "block";
+      document.getElementById("weatherCard").style.display = "none";
+      
+      try {
+        // Try to get user's location via IP
+        const res = await fetch(`https://api.weatherapi.com/v1/ip.json?key=${apiKey}`);
+        const data = await res.json();
+        
+        // Prefer Indian cities, fallback to detected location
+        let location = data.city || "Chandigarh";
+        
+        // If detected city is not in India, default to Chandigarh
+        if (data.country_code !== 'IN') {
+          location = "Chandigarh";
+        }
+        
+        await getWeather(location);
+      } catch {
+        // Ultimate fallback to Chandigarh
+        await getWeather("Chandigarh");
+      }
+    }
+
+    // Event Listeners
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+    document.getElementById('refreshBtn').addEventListener('click', detectLocationAndGetWeather);
+
+    // Load saved preferences
+    function loadPreferences() {
+      const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+      
+      if (savedDarkMode) {
+        darkMode = true;
+        document.body.classList.add('dark');
+        document.getElementById('themeToggle').innerHTML = '☀️ Light Mode';
+        document.getElementById('themeToggle').classList.add('active');
+      }
+
+      // Check if install was dismissed
+      const installDismissed = localStorage.getItem('installDismissed') === 'true';
+      if (installDismissed) {
+        document.getElementById('installPrompt').style.display = 'none';
+      }
+    }
+
+    // Auto-refresh every 15 minutes
+    setInterval(detectLocationAndGetWeather, 15 * 60 * 1000);
+
+    // Initialize app
+    window.addEventListener('load', () => {
+      loadPreferences();
+      detectLocationAndGetWeather();
+    });
+
+    // Simple service worker for basic PWA functionality
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        self.addEventListener('install', event => {
+          console.log('Service Worker installed');
+          self.skipWaiting();
+        });
+
+        self.addEventListener('activate', event => {
+          console.log('Service Worker activated');
+          event.waitUntil(clients.claim());
+        });
+
+        self.addEventListener('fetch', event => {
+          // Pass through all requests
+          event.respondWith(fetch(event.request));
+        });
+      `;
+      
+      const swBlob = new Blob([swCode], { type: 'application/javascript' });
+      const swUrl = URL.createObjectURL(swBlob);
+      
+      navigator.serviceWorker.register(swUrl)
+        .then(() => console.log('Service Worker registered'))
+        .catch(() => console.log('Service Worker registration failed'));
+    }
+  </script>
+</body>
+</html>
