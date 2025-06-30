@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard - Chandigarh</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .weather-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .weather-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .weather-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .current-weather {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            align-items: center;
+        }
+
+        .temp-display {
+            text-align: center;
+        }
+
+        .temp-main {
+            font-size: 4rem;
+            font-weight: bold;
+            margin: 10px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .weather-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 15px;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+        }
+
+        .condition-text {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .feels-like {
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            text-align: left;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .detail-label {
+            font-weight: 500;
+            opacity: 0.8;
+        }
+
+        .detail-value {
+            font-weight: bold;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 300;
+        }
+
+        .air-quality {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .aqi-indicator {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .aqi-good { background: #4CAF50; }
+        .aqi-moderate { background: #FF9800; }
+        .aqi-unhealthy { background: #F44336; }
+
+        .hourly-forecast {
+            display: flex;
+            overflow-x: auto;
+            gap: 15px;
+            padding: 20px 0;
+        }
+
+        .hour-item {
+            min-width: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .hour-item:hover {
+            transform: scale(1.05);
+        }
+
+        .hour-time {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+
+        .hour-icon {
+            width: 40px;
+            height: 40px;
+            margin: 10px auto;
+        }
+
+        .hour-temp {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .hour-condition {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            font-size: 1.5rem;
+            margin: 50px 0;
+        }
+
+        .error {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid #F44336;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .sun-info {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        .sun-item {
+            text-align: center;
+        }
+
+        .sun-time {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading { animation: pulse 2s infinite; }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .temp-main { font-size: 3rem; }
+            .current-weather { grid-template-columns: 1fr; }
+            .details-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Weather Dashboard</h1>
+            <p>Real-time weather information for Chandigarh</p>
+        </div>
+
+        <div id="loading" class="loading">
+            🌤️ Loading weather data...
+        </div>
+
+        <div id="error" class="error" style="display: none;">
+            ❌ Failed to load weather data. Please try again later.
+        </div>
+
+        <div id="weather-content" style="display: none;">
+            <div class="weather-grid">
+                <div class="weather-card current-weather">
+                    <div class="temp-display">
+                        <img id="weather-icon" class="weather-icon" src="" alt="Weather Icon">
+                        <div id="temperature" class="temp-main">--°C</div>
+                        <div id="condition" class="condition-text">Loading...</div>
+                        <div id="feels-like" class="feels-like">Feels like --°C</div>
+                    </div>
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">💨 Wind</span>
+                            <span id="wind" class="detail-value">-- km/h</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">💧 Humidity</span>
+                            <span id="humidity" class="detail-value">--%</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">🌡️ Pressure</span>
+                            <span id="pressure" class="detail-value">-- mb</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">👁️ Visibility</span>
+                            <span id="visibility" class="detail-value">-- km</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">☀️ UV Index</span>
+                            <span id="uv" class="detail-value">--</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">☁️ Cloud Cover</span>
+                            <span id="cloud" class="detail-value">--%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="weather-card">
+                    <div class="section-title">🌅 Sun & Moon</div>
+                    <div class="sun-info">
+                        <div class="sun-item">
+                            <div>🌅 Sunrise</div>
+                            <div id="sunrise" class="sun-time">--:--</div>
+                        </div>
+                        <div class="sun-item">
+                            <div>🌇 Sunset</div>
+                            <div id="sunset" class="sun-time">--:--</div>
+                        </div>
+                    </div>
+                    <div class="sun-info" style="margin-top: 15px;">
+                        <div class="sun-item">
+                            <div>🌙 Moon Phase</div>
+                            <div id="moon-phase" class="sun-time">--</div>
+                        </div>
+                        <div class="sun-item">
+                            <div>🌕 Illumination</div>
+                            <div id="moon-illumination" class="sun-time">--%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="weather-card">
+                    <div class="section-title">🏭 Air Quality</div>
+                    <div class="air-quality">
+                        <div style="margin-bottom: 15px;">
+                            EPA Index: <span id="epa-index" class="aqi-indicator">--</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 0.9rem;">
+                            <div>PM2.5: <span id="pm25">--</span> μg/m³</div>
+                            <div>PM10: <span id="pm10">--</span> μg/m³</div>
+                            <div>CO: <span id="co">--</span> μg/m³</div>
+                            <div>NO2: <span id="no2">--</span> μg/m³</div>
+                            <div>O3: <span id="ozone">--</span> μg/m³</div>
+                            <div>SO2: <span id="so2">--</span> μg/m³</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="weather-card">
+                <div class="section-title">📊 Hourly Forecast</div>
+                <div id="hourly-forecast" class="hourly-forecast">
+                    <!-- Hourly data will be populated here -->
+                </div>
+            </div>
+
+            <div class="weather-card">
+                <div class="section-title">📍 Location Details</div>
+                <div class="details-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">🏙️ Location</span>
+                        <span id="location" class="detail-value">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">🕐 Local Time</span>
+                        <span id="local-time" class="detail-value">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">🌍 Coordinates</span>
+                        <span id="coordinates" class="detail-value">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">🔄 Last Updated</span>
+                        <span id="last-updated" class="detail-value">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://api.weatherapi.com/v1/forecast.json?key=65bb53480a9d4f52959171724252906&q=chandigarh&days=1&aqi=yes&alerts=yes';
+
+        async function fetchWeatherData() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                updateWeatherDisplay(data);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('weather-content').style.display = 'block';
+            } catch (error) {
+                console.error('Error fetching weather data:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+
+        function updateWeatherDisplay(data) {
+            const { location, current, forecast } = data;
+            const today = forecast.forecastday[0];
+
+            // Current weather
+            document.getElementById('temperature').textContent = `${current.temp_c}°C`;
+            document.getElementById('condition').textContent = current.condition.text;
+            document.getElementById('feels-like').textContent = `Feels like ${current.feelslike_c}°C`;
+            document.getElementById('weather-icon').src = `https:${current.condition.icon}`;
+            document.getElementById('weather-icon').alt = current.condition.text;
+
+            // Weather details
+            document.getElementById('wind').textContent = `${current.wind_kph} km/h ${current.wind_dir}`;
+            document.getElementById('humidity').textContent = `${current.humidity}%`;
+            document.getElementById('pressure').textContent = `${current.pressure_mb} mb`;
+            document.getElementById('visibility').textContent = `${current.vis_km} km`;
+            document.getElementById('uv').textContent = current.uv;
+            document.getElementById('cloud').textContent = `${current.cloud}%`;
+
+            // Sun & Moon
+            document.getElementById('sunrise').textContent = today.astro.sunrise;
+            document.getElementById('sunset').textContent = today.astro.sunset;
+            document.getElementById('moon-phase').textContent = today.astro.moon_phase;
+            document.getElementById('moon-illumination').textContent = `${today.astro.moon_illumination}%`;
+
+            // Air quality
+            const aqiClass = getAQIClass(current.air_quality['us-epa-index']);
+            const aqiText = getAQIText(current.air_quality['us-epa-index']);
+            document.getElementById('epa-index').textContent = aqiText;
+            document.getElementById('epa-index').className = `aqi-indicator ${aqiClass}`;
+            
+            document.getElementById('pm25').textContent = current.air_quality.pm2_5.toFixed(1);
+            document.getElementById('pm10').textContent = current.air_quality.pm10.toFixed(1);
+            document.getElementById('co').textContent = current.air_quality.co.toFixed(0);
+            document.getElementById('no2').textContent = current.air_quality.no2.toFixed(1);
+            document.getElementById('ozone').textContent = current.air_quality.o3.toFixed(0);
+            document.getElementById('so2').textContent = current.air_quality.so2.toFixed(1);
+
+            // Location details
+            document.getElementById('location').textContent = `${location.name}, ${location.region}, ${location.country}`;
+            document.getElementById('local-time').textContent = location.localtime;
+            document.getElementById('coordinates').textContent = `${location.lat}°, ${location.lon}°`;
+            document.getElementById('last-updated').textContent = current.last_updated;
+
+            // Hourly forecast
+            updateHourlyForecast(today.hour);
+        }
+
+        function updateHourlyForecast(hours) {
+            const hourlyContainer = document.getElementById('hourly-forecast');
+            hourlyContainer.innerHTML = '';
+
+            // Show next 12 hours
+            const currentHour = new Date().getHours();
+            const relevantHours = hours.slice(currentHour, currentHour + 12);
+
+            relevantHours.forEach(hour => {
+                const hourDiv = document.createElement('div');
+                hourDiv.className = 'hour-item';
+                
+                const time = new Date(hour.time).toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    hour12: true 
+                });
+
+                hourDiv.innerHTML = `
+                    <div class="hour-time">${time}</div>
+                    <img class="hour-icon" src="https:${hour.condition.icon}" alt="${hour.condition.text}">
+                    <div class="hour-temp">${hour.temp_c}°C</div>
+                    <div class="hour-condition">${hour.condition.text}</div>
+                    <div style="font-size: 0.7rem; margin-top: 5px;">
+                        💧 ${hour.chance_of_rain}%
+                    </div>
+                `;
+                
+                hourlyContainer.appendChild(hourDiv);
+            });
+        }
+
+        function getAQIClass(index) {
+            if (index <= 2) return 'aqi-good';
+            if (index <= 3) return 'aqi-moderate';
+            return 'aqi-unhealthy';
+        }
+
+        function getAQIText(index) {
+            const aqiTexts = {
+                1: 'Good',
+                2: 'Moderate',
+                3: 'Unhealthy for Sensitive',
+                4: 'Unhealthy',
+                5: 'Very Unhealthy',
+                6: 'Hazardous'
+            };
+            return aqiTexts[index] || 'Unknown';
+        }
+
+        // Fetch weather data on page load
+        fetchWeatherData();
+
+        // Refresh data every 10 minutes
+        setInterval(fetchWeatherData, 600000);
+    </script>
+</body>
+</html>
