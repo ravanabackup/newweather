@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hourly Forecast Cards</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 30px;
+    }
+    h2 {
+      font-weight: 300;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .forecast-row {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 20px;
+      margin-bottom: 40px;
+    }
+    .hour-card {
+      min-width: 120px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 15px;
+      padding: 10px;
+      text-align: center;
+      backdrop-filter: blur(8px);
+      transition: transform 0.2s ease;
+    }
+    .hour-card img {
+      width: 40px;
+      height: 40px;
+    }
+    .hour-card .time {
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    .rain {
+      font-size: 0.85em;
+      color: #a5f6ff;
+    }
+    .highlight {
+      border: 2px solid #ffeb3b;
+      background: rgba(255,255,255,0.2);
+    }
+    input, button {
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      margin-bottom: 20px;
+    }
+    button {
+      background: #00adb5;
+      color: white;
+      cursor: pointer;
+    }
+    .search-row {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📍 Hourly Forecast Comparison</h2>
+    <div class="search-row">
+      <input type="text" id="locationInput" placeholder="Enter city (or leave blank)">
+      <button onclick="loadForecast()">Get Forecast</button>
+    </div>
+
+    <h2>🌤️ WeatherAPI Forecast</h2>
+    <div class="forecast-row" id="wapiForecast">Loading...</div>
+
+    <h2>🌥️ OpenWeatherMap Forecast</h2>
+    <div class="forecast-row" id="owmForecast">Loading...</div>
+  </div>
+
+  <script>
+    const WAPI_KEY = '65bb53480a9d4f52959171724252906';
+    const OWM_KEY = '5011fdcc3e79864c51227fb6b91a2ff4';
+
+    async function detectLocation() {
+      return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(async pos => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          const res = await fetch(`https://api.weatherapi.com/v1/search.json?key=${WAPI_KEY}&q=${lat},${lon}`);
+          const data = await res.json();
+          resolve(data[0]?.name || 'Chandigarh');
+        }, () => resolve('Chandigarh'));
+      });
+    }
+
+    function isNowHour(dateString) {
+      const forecastHour = new Date(dateString).getHours();
+      return forecastHour === new Date().getHours();
+    }
+
+    async function loadForecast() {
+      const locInput = document.getElementById('locationInput').value;
+      const location = locInput || await detectLocation();
+
+      const [wapiRes, owmRes] = await Promise.all([
+        fetch(`https://api.weatherapi.com/v1/forecast.json?key=${WAPI_KEY}&q=${location}&days=1`).then(r => r.json()),
+        fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${location}&appid=${OWM_KEY}&units=metric`).then(r => r.json())
+      ]);
+
+      const wapiHours = wapiRes.forecast.forecastday[0].hour;
+      const wapiContainer = document.getElementById('wapiForecast');
+      wapiContainer.innerHTML = '';
+      wapiHours.forEach(hour => {
+        const time = hour.time.split(' ')[1];
+        const icon = hour.condition.icon;
+        const temp = hour.temp_c;
+        const text = hour.condition.text;
+        const rain = hour.chance_of_rain;
+        const highlight = isNowHour(hour.time) ? 'highlight' : '';
+        wapiContainer.innerHTML += `
+          <div class="hour-card ${highlight}">
+            <div class="time">${time}</div>
+            <img src="https:${icon}" />
+            <div>${temp}°C</div>
+            <div style="font-size:0.85em">${text}</div>
+            <div class="rain">💧 ${rain}%</div>
+          </div>`;
+      });
+
+      const owmHours = owmRes.list.slice(0, 12);
+      const owmContainer = document.getElementById('owmForecast');
+      owmContainer.innerHTML = '';
+      owmHours.forEach(hour => {
+        const dt = new Date(hour.dt * 1000);
+        const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const icon = `https://openweathermap.org/img/wn/${hour.weather[0].icon}@2x.png`;
+        const temp = hour.main.temp.toFixed(1);
+        const text = hour.weather[0].description;
+        const rain = hour.pop ? Math.round(hour.pop * 100) : 0;
+        const highlight = dt.getHours() === new Date().getHours() ? 'highlight' : '';
+        owmContainer.innerHTML += `
+          <div class="hour-card ${highlight}">
+            <div class="time">${time}</div>
+            <img src="${icon}" />
+            <div>${temp}°C</div>
+            <div style="font-size:0.85em">${text}</div>
+            <div class="rain">💧 ${rain}%</div>
+          </div>`;
+      });
+    }
+
+    loadForecast();
+  </script>
+</body>
+</html>
