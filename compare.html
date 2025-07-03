@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Weather Comparison Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: white;
+      overflow-x: hidden;
+    }
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      animation: fadeInDown 1s ease-out;
+    }
+    .header h1 {
+      font-size: 3rem;
+      font-weight: 300;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    .header p { font-size: 1.2rem; opacity: 0.9; }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 20px;
+      animation: fadeInUp 1s ease-out;
+    }
+    .card h3 {
+      text-align: center;
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      opacity: 0.9;
+    }
+    .weather-now {
+      text-align: center;
+    }
+    .weather-now img {
+      width: 70px;
+      height: 70px;
+      margin: 10px 0;
+      filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+    }
+    .temp { font-size: 2.5rem; font-weight: bold; }
+    .desc { font-size: 1rem; opacity: 0.9; margin-top: 5px; }
+
+    .aqi-badge {
+      display: inline-block;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    .aqi-good { background: #4CAF50; }
+    .aqi-moderate { background: #FF9800; }
+    .aqi-unhealthy { background: #F44336; }
+
+    .hourly-forecast {
+      display: flex;
+      overflow-x: auto;
+      gap: 15px;
+      padding: 10px;
+    }
+    .hour-card {
+      min-width: 100px;
+      text-align: center;
+      background: rgba(255,255,255,0.1);
+      border-radius: 15px;
+      padding: 10px;
+    }
+    .hour-card img {
+      width: 40px;
+      height: 40px;
+    }
+
+    canvas {
+      background: white;
+      border-radius: 15px;
+      padding: 10px;
+      margin-top: 10px;
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🌍 Weather Comparison Dashboard</h1>
+    <p>Real-time weather data from WeatherAPI & OpenWeatherMap</p>
+  </div>
+
+  <div class="info-grid">
+    <div class="card">
+      <h3>🌤️ Current Weather</h3>
+      <div class="weather-now">
+        <img id="icon" src="" alt="">
+        <div class="temp" id="temperature">--°C</div>
+        <div class="desc" id="condition">Loading...</div>
+        <div class="desc" id="feelslike">Feels like --°C</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🌅 Sun & Moon</h3>
+      <div id="sunmoon"></div>
+    </div>
+
+    <div class="card">
+      <h3>🏭 Air Quality</h3>
+      <div id="airquality"></div>
+    </div>
+
+    <div class="card">
+      <h3>📍 Location</h3>
+      <div id="locationinfo"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📊 Hourly Forecast</h3>
+    <div class="hourly-forecast" id="hourlyCards"></div>
+  </div>
+
+  <div class="info-grid">
+    <div class="card">
+      <h3>WeatherAPI.com</h3>
+      <canvas id="chartWAPI"></canvas>
+    </div>
+    <div class="card">
+      <h3>OpenWeatherMap.org</h3>
+      <canvas id="chartOWM"></canvas>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const WAPI_KEY = '65bb53480a9d4f52959171724252906';
+const OWM_KEY = '5011fdcc3e79864c51227fb6b91a2ff4';
+
+const ctxWAPI = document.getElementById('chartWAPI').getContext('2d');
+const ctxOWM = document.getElementById('chartOWM').getContext('2d');
+
+const chartWAPI = new Chart(ctxWAPI, {
+  type: 'line',
+  data: { labels: [], datasets: [] },
+  options: { responsive: true, scales: { y: { beginAtZero: true } } }
+});
+
+const chartOWM = new Chart(ctxOWM, {
+  type: 'line',
+  data: { labels: [], datasets: [] },
+  options: { responsive: true, scales: { y: { beginAtZero: true } } }
+});
+
+async function detectLocation() {
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const res = await fetch(`https://api.weatherapi.com/v1/search.json?key=${WAPI_KEY}&q=${pos.coords.latitude},${pos.coords.longitude}`);
+      const data = await res.json();
+      resolve(data[0]?.name || 'Chandigarh');
+    }, () => resolve('Chandigarh'));
+  });
+}
+
+function getAQIClass(index) {
+  if (index <= 2) return 'aqi-good';
+  if (index <= 3) return 'aqi-moderate';
+  return 'aqi-unhealthy';
+}
+
+function getAQIText(index) {
+  const text = { 1: 'Good', 2: 'Moderate', 3: 'Unhealthy for Sensitive', 4: 'Unhealthy', 5: 'Very Unhealthy', 6: 'Hazardous' };
+  return text[index] || 'Unknown';
+}
+
+async function loadWeather() {
+  const location = await detectLocation();
+
+  const [wapiRes, owmRes] = await Promise.all([
+    fetch(`https://api.weatherapi.com/v1/forecast.json?key=${WAPI_KEY}&q=${location}&days=1&aqi=yes`),
+    fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${location}&appid=${OWM_KEY}&units=metric`)
+  ]);
+
+  const wapi = await wapiRes.json();
+  const owm = await owmRes.json();
+
+  const current = wapi.current;
+  document.getElementById('icon').src = `https:${current.condition.icon}`;
+  document.getElementById('temperature').textContent = `${current.temp_c}°C`;
+  document.getElementById('condition').textContent = current.condition.text;
+  document.getElementById('feelslike').textContent = `Feels like ${current.feelslike_c}°C`;
+
+  const astro = wapi.forecast.forecastday[0].astro;
+  document.getElementById('sunmoon').innerHTML = `
+    ☀️ Sunrise: ${astro.sunrise}<br>🌇 Sunset: ${astro.sunset}<br>
+    🌙 Phase: ${astro.moon_phase}<br>🔆 Illumination: ${astro.moon_illumination}%
+  `;
+
+  const air = current.air_quality;
+  const aqiClass = getAQIClass(air["us-epa-index"]);
+  document.getElementById('airquality').innerHTML = `
+    EPA Index: <span class="aqi-badge ${aqiClass}">${getAQIText(air["us-epa-index"])}</span><br><br>
+    PM2.5: ${air.pm2_5.toFixed(1)} μg/m³<br>
+    PM10: ${air.pm10.toFixed(1)} μg/m³<br>
+    CO: ${air.co.toFixed(1)} μg/m³<br>
+    NO2: ${air.no2.toFixed(1)} μg/m³<br>
+    O3: ${air.o3.toFixed(1)} μg/m³<br>
+    SO2: ${air.so2.toFixed(1)} μg/m³
+  `;
+
+  const loc = wapi.location;
+  document.getElementById('locationinfo').innerHTML = `
+    🏙️ ${loc.name}, ${loc.region}, ${loc.country}<br>
+    🕒 Local Time: ${loc.localtime}<br>
+    🌍 Coordinates: ${loc.lat}°, ${loc.lon}°<br>
+    🔄 Updated: ${current.last_updated}
+  `;
+
+  const hourlyW = wapi.forecast.forecastday[0].hour;
+  const hourlyO = owm.list.slice(0, 12);
+
+  chartWAPI.data.labels = hourlyW.map(h => h.time.split(' ')[1]);
+  chartWAPI.data.datasets = [{
+    label: 'Temperature (°C)',
+    data: hourlyW.map(h => h.temp_c),
+    borderColor: '#4fc3f7',
+    backgroundColor: 'rgba(33,150,243,0.3)',
+    fill: true
+  }];
+  chartWAPI.update();
+
+  chartOWM.data.labels = hourlyO.map(h => new Date(h.dt * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+  chartOWM.data.datasets = [{
+    label: 'Temperature (°C)',
+    data: hourlyO.map(h => h.main.temp),
+    borderColor: '#ff9800',
+    backgroundColor: 'rgba(255,152,0,0.3)',
+    fill: true
+  }];
+  chartOWM.update();
+
+  const hourlyCards = document.getElementById('hourlyCards');
+  hourlyCards.innerHTML = '';
+  hourlyW.slice(0, 12).forEach(h => {
+    const div = document.createElement('div');
+    div.className = 'hour-card';
+    div.innerHTML = `
+      <div>${h.time.split(' ')[1]}</div>
+      <img src="https:${h.condition.icon}" alt="">
+      <div>${h.temp_c}°C</div>
+      <div style="font-size: 0.8rem">${h.condition.text}</div>
+      <div style="font-size: 0.7rem">💧${h.chance_of_rain}%</div>
+    `;
+    hourlyCards.appendChild(div);
+  });
+}
+
+loadWeather();
+</script>
+</body>
+</html>
