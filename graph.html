@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>📊 Hourly Forecast Comparison</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1e1e2f, #34344a);
+      color: #fff;
+    }
+    .container {
+      max-width: 1100px;
+      margin: auto;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .input-row {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
+      background: #00adb5;
+      color: white;
+      cursor: pointer;
+    }
+    canvas {
+      background: white;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 30px;
+    }
+    .chart-title {
+      text-align: center;
+      margin: 15px 0 5px;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 Hourly Forecast - WeatherAPI vs OpenWeatherMap</h1>
+    <div class="input-row">
+      <input type="text" id="locationInput" placeholder="Enter City or leave blank for auto-location">
+      <button onclick="loadWeather()">Get Forecast</button>
+    </div>
+
+    <div>
+      <div class="chart-title">WeatherAPI.com - Hourly Temperature</div>
+      <canvas id="chartWAPI"></canvas>
+    </div>
+
+    <div>
+      <div class="chart-title">OpenWeatherMap - Hourly Temperature</div>
+      <canvas id="chartOWM"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const WAPI_KEY = '65bb53480a9d4f52959171724252906';
+    const OWM_KEY = '5011fdcc3e79864c51227fb6b91a2ff4';
+
+    const chartW = new Chart(document.getElementById('chartWAPI'), {
+      type: 'line',
+      data: { labels: [], datasets: [] },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false }},
+        scales: {
+          y: { beginAtZero: false },
+          x: { ticks: { color: '#fff' } }
+        }
+      }
+    });
+
+    const chartO = new Chart(document.getElementById('chartOWM'), {
+      type: 'line',
+      data: { labels: [], datasets: [] },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false }},
+        scales: {
+          y: { beginAtZero: false },
+          x: { ticks: { color: '#fff' } }
+        }
+      }
+    });
+
+    async function detectLocation() {
+      return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(async pos => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          const res = await fetch(`https://api.weatherapi.com/v1/search.json?key=${WAPI_KEY}&q=${lat},${lon}`);
+          const data = await res.json();
+          resolve(data[0]?.name || 'Chandigarh');
+        }, () => resolve('Chandigarh'));
+      });
+    }
+
+    async function loadWeather() {
+      const inputLoc = document.getElementById('locationInput').value;
+      const location = inputLoc || await detectLocation();
+
+      const [wapiRes, owmRes] = await Promise.all([
+        fetch(`https://api.weatherapi.com/v1/forecast.json?key=${WAPI_KEY}&q=${location}&days=1&aqi=no`),
+        fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${location}&appid=${OWM_KEY}&units=metric`)
+      ]);
+
+      const wapi = await wapiRes.json();
+      const owm = await owmRes.json();
+
+      const now = new Date();
+      const nowHour = now.getHours();
+
+      // WeatherAPI hourly
+      const wapiHours = wapi.forecast.forecastday[0].hour.slice(0, 24);
+      chartW.data.labels = wapiHours.map(h => h.time.split(' ')[1]);
+      chartW.data.datasets = [{
+        label: 'WeatherAPI Temp (°C)',
+        data: wapiHours.map(h => h.temp_c),
+        borderColor: '#4fc3f7',
+        backgroundColor: 'rgba(79,195,247,0.2)',
+        fill: true,
+        pointRadius: wapiHours.map(h => parseInt(h.time.split(' ')[1].split(':')[0]) === nowHour ? 6 : 3),
+        pointBackgroundColor: wapiHours.map(h => parseInt(h.time.split(' ')[1].split(':')[0]) === nowHour ? '#ffeb3b' : '#4fc3f7')
+      }];
+      chartW.update();
+
+      // OWM hourly (3-hour interval data, next 24 hours = 8 points)
+      const owmHours = owm.list.slice(0, 8);
+      chartO.data.labels = owmHours.map(h => new Date(h.dt * 1000).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}));
+      chartO.data.datasets = [{
+        label: 'OWM Temp (°C)',
+        data: owmHours.map(h => h.main.temp),
+        borderColor: '#ff9800',
+        backgroundColor: 'rgba(255,152,0,0.2)',
+        fill: true,
+        pointRadius: owmHours.map(h => {
+          const hour = new Date(h.dt * 1000).getHours();
+          return hour === nowHour ? 6 : 3;
+        }),
+        pointBackgroundColor: owmHours.map(h => {
+          const hour = new Date(h.dt * 1000).getHours();
+          return hour === nowHour ? '#ffeb3b' : '#ff9800';
+        })
+      }];
+      chartO.update();
+    }
+
+    loadWeather();
+  </script>
+</body>
+</html>
